@@ -1,3 +1,136 @@
+# 🏠 Home Server API — CSV Cleaning & AI QA Agent
+
+Ez a projekt egy **NestJS alapú backend**, amely több kisebb „home-server” jellegű szolgáltatás alapját képezi.  
+Első és jelenlegi fő funkciója egy **intelligens CSV tisztító és elemző API**, amely képes:
+
+- a feltöltött CSV-t **kézi (deterministic)** módszerekkel megtisztítani,
+- majd egy **AI ügynök segítségével** további strukturális hibákat keresni,
+- és végül visszaadni a **megtisztított CSV-t**, valamint az AI által adott:
+  - magyarázatot,
+  - talált problémák listáját,
+  - és javasolt tisztítási lépéseit.
+
+A projekt célja egy olyan stabil, bővíthető backend kialakítása, amely később több különféle home-server jellegű funkciót is elláthat (pl. Angular frontend kiszolgálása, Cloudflare Tunnel mögötti szolgáltatások, adatfeldolgozás stb.).
+
+---
+
+## ✨ Funkcionalitás röviden
+
+### 🔧 1. Determinisztikus CSV tisztítás (AI nélkül)
+A rendszer saját tisztító motorral rendelkezik (`CsvEngineService`), amely képes:
+
+- felesleges szóközök eltávolítására
+- külső idézőjelek lecsupaszítására
+- üres sorok eltávolítására
+- hiányzó oszlopok kitöltésére vagy hibás sorok eldöntésére
+
+Ezeket a lépéseket **minden CSV feltöltésnél automatikusan lefuttatjuk**.
+
+---
+
+### 🤖 2. AI-alapú ellenőrzés és hibadetektálás
+A megtisztított CSV-ből a rendszer mintát készít, majd elküldi egy **kis erőforrásigényű LLM-nek** (alapértelmezetten *llama3.2:1b*).
+
+Az AI feladata:
+
+- strukturális anomáliák azonosítása (pl. hibás idézőjelek, eltérő oszlopszám),
+- adattisztítási javaslatok adása egy fix action-készletből,
+- emberi nyelven magyarázatot fűzni a talált hibákhoz.
+
+A rendszer **csak JSON választ fogad el**, és a hibás, mellébeszélős kimeneteket automatikusan szűri.
+
+---
+
+### 🧹 3. Tisztítási lépések összevonása
+A rendszer az AI által javasolt action-öket **tényleges tisztító műveletekké alakítja**, és a teljes CSV-re alkalmazza.
+
+A válasz részei:
+
+- `cleanedCsv` — a végleges tisztított CSV
+- `stats` — hany sor változott, hány lett törölve, hány oszlop lett egységesítve
+- `aiReview` — az AI magyarázata és akciólistája
+
+---
+
+## 🚀 Használat (lokális fejlesztés)
+
+## 📡 API rövid dokumentáció
+
+### POST `/api/csv/clean`
+
+**Kérés:**
+{
+  "csv": "ID,Name,Age\n1,John,25\n2,Anna,30",
+  "delimiter": ",",
+  "hasHeader": true
+}
+**Válasz:**
+{
+  "aiReview": {
+    "explanation": "...",
+    "issues": [],
+    "actions": []
+  },
+  "stats": {
+    "rowsBefore": 3,
+    "rowsAfter": 3,
+    "columns": 3,
+    "rowsChanged": 1,
+    "rowsDropped": 0
+  },
+  "cleanedCsv": "..."
+}
+
+## 🛠 Tech stack
+
+- **NestJS** — keretrendszer
+- **TypeScript**
+- **Axios** — AI agent hívásához
+- **Ollama / OpenAI-kompatibilis API** — LLM integráció
+- **CSV Engine (custom)** — saját, bővíthető tisztító modul
+- **GitHub Actions (később)** — CI/CD alapok előkészítve
+
+---
+
+## 📘 Példa workflow
+
+1. A felhasználó feltölt egy problémás CSV-t  
+2. A backend elemzi és determinisztikusan megtisztítja  
+3. A backend mintát készít és elküldi az AI-nak  
+4. Az AI JSON-ban visszaküld magyarázatot, problémalistát, javasolt actionöket  
+5. A backend ezeket valós tisztító lépésekké alakítja  
+6. A végleges CSV visszakerül a frontendnek  
+
+---
+
+## 📦 Jövőbeli tervek
+
+A projekt modulárisan bővíthető. A tervezett funkciók:
+
+### 🔹 1. Frontend (Angular + Ionic)
+- CSV feltöltő UI  
+- “Előtte / utána” megjelenítés  
+- Tokenhasználat megjelenítése  
+- Letisztult demófelület  
+
+### 🔹 2. Erősebb AI modellek támogatása
+- GPT-4o / GPT-4o-mini  
+- Mistral 7B / 8x22B  
+- DeepSeek R1  
+
+### 🔹 3. CSV Engine bővítése
+- Robosztusabb CSV parser  
+- Nagy fájlok stream-alapú feldolgozása  
+- Validátor modulok (email, dátum, szám)  
+
+### 🔹 4. Home-server modulok
+- File manager  
+- Reverse proxy helper  
+- Logoló szolgáltatás  
+- Angular alkalmazások hostolása  
+
+
+
 <p align="center">
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
 </p>

@@ -17,9 +17,9 @@ interface AnalyzeCsvPromptInput {
  * használt részhalmaza.
  */
 interface AiChatCompletionResponse {
-  choices: {
-    message: {
-      content: string;
+  choices?: {
+    message?: {
+      content?: string;
     };
   }[];
 }
@@ -37,6 +37,8 @@ export class AiService {
 
     // Használt modell – env-ből állítható, különben llama3.2:1b.
     this.model = process.env.AI_MODEL ?? 'llama3.2:1b';
+
+    this.logger.log(`AI SERVICE INIT: url=${this.apiUrl}, model=${this.model}`);
   }
 
   /**
@@ -49,12 +51,11 @@ export class AiService {
     const systemPrompt = this.buildSystemPrompt();
     const userPrompt = this.buildUserPrompt(input);
 
-    try {
-      // Debug log – egyszer hasznos lehet
-      this.logger.log(
-        `Calling AI agent at ${this.apiUrl} with model=${this.model}`,
-      );
+    this.logger.log(
+      `AI: calling agent: url=${this.apiUrl}, model=${this.model}`,
+    );
 
+    try {
       const { data } = await axios.post<AiChatCompletionResponse>(
         this.apiUrl,
         {
@@ -69,12 +70,16 @@ export class AiService {
         { timeout: 15000 },
       );
 
-      // Minimális védelem: nézzük meg, van-e content string.
+      this.logger.log('AI: response received from agent');
+
+      // Az Ollama /v1/chat/completions válasza: { choices: [ { message: { content: "..." } } ] }
       const content = data.choices?.[0]?.message?.content;
 
       if (!content || typeof content !== 'string') {
         this.logger.error(
-          `AI response has no content: ${JSON.stringify(data)}`,
+          `AI response has no content or non-string content. Raw data: ${JSON.stringify(
+            data,
+          ).substring(0, 500)}...`,
         );
         throw new Error('AI returned empty or invalid content.');
       }
@@ -90,31 +95,48 @@ export class AiService {
         const code = axiosError.code;
 
         this.logger.error(
-          `Axios error calling AI agent: message=${axiosError.message}, code=${code}, status=${status}`,
+          `AI AXIOS ERROR: message="${axiosError.message}", code="${code}", status=${status}`,
         );
 
+        // 2) A response body-ból első 500 karakter:
         if (body !== undefined) {
-          this.logger.error(`AI response body: ${JSON.stringify(body)}`);
+          try {
+            this.logger.error(
+              `AI AXIOS RESPONSE BODY: ${JSON.stringify(body).substring(
+                0,
+                500,
+              )}...`,
+            );
+          } catch {
+            this.logger.error(
+              `AI AXIOS RESPONSE BODY (non-JSON, type=${typeof body})`,
+            );
+          }
         }
 
-        // továbbdobjuk, hogy a Nest 500-at adjon vissza
-        throw axiosError;
-      }
-
-      // 2) Nem-Axios Error
-      if (error instanceof Error) {
-        this.logger.error(
-          `Non-Axios error calling AI agent: ${error.message}`,
-          error.stack,
+        // 3) plusz egy direkt console.error, hogy biztosan bekerüljön a journald-ba
+        console.error(
+          'AI-DEBUG-AXIOS:',
+          axiosError.message,
+          'code=',
+          code,
+          'status=',
+          status,
         );
-        throw error;
+      } else if (error instanceof Error) {
+        // 2) Nem-Axios Error
+        this.logger.error(`AI NON-AXIOS ERROR: ${error.message}`);
+        console.error('AI-DEBUG-NON-AXIOS:', error.message);
+      } else {
+        // 3) Valami teljesen ismeretlen
+        this.logger.error(`AI UNKNOWN ERROR TYPE: ${String(error)}`);
+        console.error('AI-DEBUG-UNKNOWN:', String(error));
       }
 
-      // 3) Valami teljesen ismeretlen
-      this.logger.error(
-        `Unknown error calling AI agent: ${JSON.stringify(error)}`,
-      );
-      throw new Error('Unknown error calling AI agent');
+      // továbbdobjuk, hogy a Nest 500-at adjon vissza
+      throw error instanceof Error
+        ? error
+        : new Error('Unknown error calling AI agent');
     }
   }
 

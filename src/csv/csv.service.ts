@@ -165,7 +165,11 @@ export class CsvService {
       hasHeader,
     };
 
+    this.logger.log('CLEAN_CSV: calling analyzeCsv (AI)...');
+
     const plan = await this.analyzeCsv(analyzeDto); // explanation + issues + actions[]
+
+    this.logger.log('CLEAN_CSV: analyzeCsv (AI) finished OK.');
 
     // 4) AI review objektum – frontendnek
     const aiReview: AiReview = {

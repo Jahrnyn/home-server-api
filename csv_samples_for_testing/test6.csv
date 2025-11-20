@@ -1,0 +1,6 @@
+ID,Nev,Eletkor,Email,Varos
+" 1 ","  Janos   Kovacs  ","25","janos@example.com","Budapest"
+"2","Anna Szabo","not_a_number"," anna@example.com ","Szeged   "
+3," Peter  Nagy ",30,"peter@example.com"
+4,"   ",,"   ","   "
+5,"Kata Kovacs","27","kata@example.com","Pecs"

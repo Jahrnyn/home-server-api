@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 
 /**
  * Bemeneti DTO az AI számára.
@@ -50,6 +50,11 @@ export class AiService {
     const userPrompt = this.buildUserPrompt(input);
 
     try {
+      // Debug log – egyszer hasznos lehet
+      this.logger.log(
+        `Calling AI agent at ${this.apiUrl} with model=${this.model}`,
+      );
+
       const { data } = await axios.post<AiChatCompletionResponse>(
         this.apiUrl,
         {
@@ -76,14 +81,36 @@ export class AiService {
 
       return content.trim();
     } catch (error: unknown) {
+      // 1) Axios-specifikus hiba
+      if (axios.isAxiosError(error)) {
+        const axiosError = error as AxiosError;
+
+        const status = axiosError.response?.status;
+        const body = axiosError.response?.data;
+        const code = axiosError.code;
+
+        this.logger.error(
+          `Axios error calling AI agent: message=${axiosError.message}, code=${code}, status=${status}`,
+        );
+
+        if (body !== undefined) {
+          this.logger.error(`AI response body: ${JSON.stringify(body)}`);
+        }
+
+        // továbbdobjuk, hogy a Nest 500-at adjon vissza
+        throw axiosError;
+      }
+
+      // 2) Nem-Axios Error
       if (error instanceof Error) {
         this.logger.error(
-          `Error calling AI agent: ${error.message}`,
+          `Non-Axios error calling AI agent: ${error.message}`,
           error.stack,
         );
         throw error;
       }
 
+      // 3) Valami teljesen ismeretlen
       this.logger.error(
         `Unknown error calling AI agent: ${JSON.stringify(error)}`,
       );

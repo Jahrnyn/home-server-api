@@ -2,10 +2,7 @@ import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { AiService } from '../ai/ai.service';
 import { AnalyzeCsvDto } from './dto/analyze-csv.dto';
 import { CleanCsvDto } from './dto/clean-csv.dto';
-import {
-  AnalyzeCsvAction,
-  AnalyzeCsvResponse,
-} from './models/analyze-csv-response.model';
+import { AnalyzeCsvResponse } from './models/analyze-csv-response.model';
 import {
   CleanCsvResponse,
   CleanStats,
@@ -15,11 +12,11 @@ import { CsvEngineService } from './csv-engine.service';
 
 // ---- RAW AI típusok (amit az LLM visszaküldhet) ----
 
-type AiRawAction = {
+/* type AiRawAction = {
   type?: unknown;
   column_index?: unknown; // snake_case verzió
   columnIndex?: unknown; // camelCase verzió
-};
+}; */
 
 type AiRawResponse = {
   explanation?: unknown;
@@ -41,7 +38,7 @@ export class CsvService {
    * meghívja az AI-t, JSON-t vár, parse-olja és minimálisan validálja,
    * majd visszaad egy AnalyzeCsvResponse struktúrát.
    */
-  async analyzeCsv(dto: AnalyzeCsvDto): Promise<AnalyzeCsvResponse> {
+  /*   async analyzeCsv(dto: AnalyzeCsvDto): Promise<AnalyzeCsvResponse> {
     const raw = await this.aiService.analyzeCsvPrompt(dto);
 
     // 1) Kivágjuk az első JSON blokkot az AI válaszból (ha dumálna is körülötte)
@@ -113,6 +110,19 @@ export class CsvService {
     };
 
     return response;
+  } */
+  async analyzeCsv(dto: AnalyzeCsvDto): Promise<AnalyzeCsvResponse> {
+    // 0. teszt: tényleg eljutunk idáig?
+    this.logger.log('ANALYZE_CSV: entered method');
+
+    // 1. teszt: csak az AI-hívásig megyünk, visszaadjuk a nyers stringet
+    const raw = await this.aiService.analyzeCsvPrompt(dto);
+
+    return {
+      explanation: 'RAW TEST',
+      issues: [raw.slice(0, 100)], // első 100 karakter
+      actions: [],
+    };
   }
 
   /**
